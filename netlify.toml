@@ -1,0 +1,66 @@
+[build]
+  publish = "build"
+  command = "npm run build"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # 마이크 및 위치 정보 접근 허용
+    Permissions-Policy = "microphone=*, geolocation=*, camera=*, speaker-selection=*"
+    
+    # CSP 헤더 설정 (미디어 기능 허용)
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' *.supabase.co *.supabase.in *.peerjs.com data: blob:; connect-src 'self' wss: ws: *.supabase.co *.supabase.in *.peerjs.com; media-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+    
+    # 기타 보안 헤더
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # HTTPS 관련 헤더 (프로덕션 환경에서 권장)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+# 개발 환경을 위한 추가 설정
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Service Worker 파일을 위한 특별 헤더
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+# 웹 앱 매니페스트를 위한 헤더
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
+# 미디어 파일을 위한 특별 헤더
+[[headers]]
+  for = "*.mp3"
+  [headers.values]
+    Content-Type = "audio/mpeg"
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "*.wav"
+  [headers.values]
+    Content-Type = "audio/wav"
+    Cache-Control = "public, max-age=31536000"
+
+# 폰트 파일을 위한 CORS 헤더
+[[headers]]
+  for = "*.woff2"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Redirect 설정 (SPA를 위한)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
