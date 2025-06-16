@@ -1,0 +1,28 @@
+/*
+  Permissions-Policy: microphone=*, geolocation=*, camera=*, speaker-selection=*
+  Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' *.supabase.co *.supabase.in *.peerjs.com data: blob:; connect-src 'self' wss: ws: *.supabase.co *.supabase.in *.peerjs.com; media-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/service-worker.js
+  Cache-Control: public, max-age=0, must-revalidate
+  Service-Worker-Allowed: /
+
+/manifest.json
+  Content-Type: application/manifest+json
+
+*.mp3
+  Content-Type: audio/mpeg
+  Cache-Control: public, max-age=31536000
+
+*.wav
+  Content-Type: audio/wav
+  Cache-Control: public, max-age=31536000
+
+*.woff2
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
