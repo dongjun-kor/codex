@@ -26,4 +26,4 @@ npm start
 
 ## 라이센스
 
-MIT License 
+CC BY-NC 4.0
