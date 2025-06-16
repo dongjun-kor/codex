@@ -1,6 +1,10 @@
 {
-  "short_name": "Voice App",
-  "name": "Proximity Voice App",
+  "short_name": "음성채팅",
+  "name": "근접 음성 채팅 앱",
+  "description": "주변의 사람들과 실시간으로 음성 대화를 나눌 수 있는 소셜 네트워킹 앱입니다.",
+  "categories": ["social", "communication", "lifestyle"],
+  "lang": "ko",
+  "dir": "ltr",
   "icons": [
     {
       "src": "favicon.ico",
@@ -22,12 +26,57 @@
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
     }
   ],
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
   "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "background_color": "#ffffff",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "빠른 채팅 시작",
+      "short_name": "채팅",
+      "description": "즉시 음성 채팅을 시작합니다",
+      "url": "/?action=quick-chat",
+      "icons": [
+        {
+          "src": "logo192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+voicechat",
+      "url": "/?action=join&room=%s"
+    }
+  ]
 }
