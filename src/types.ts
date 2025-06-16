@@ -3,6 +3,36 @@ export interface Position {
   lng: number;
 }
 
+// 운행 상태 인터페이스
+export interface ExtendedDrivingState {
+  isDriving: boolean;        // 현재 운행 중인지
+  drivingStartTime: number;  // 운행 시작 시간 (timestamp)
+  restStartTime: number;     // 휴식 시작 시간 (timestamp)
+  lastPosition: Position;    // 마지막 위치
+  lastSpeedCheck: number;    // 마지막 속도 체크 시간 (timestamp)
+  isZeroSpeed: boolean;      // 현재 0km/h 상태인지
+  zeroSpeedStartTime: number; // 0km/h 시작 시간 (timestamp)
+  totalDrivingTime: number;  // 총 운행 시간 (초) - 누적된 시간
+  currentSessionTime: number; // 현재 세션 운행 시간 (초)
+  isResting: boolean;        // 휴식 중인지 여부
+  restDuration: number;      // 현재 휴식 시간 (초)
+  hasInitialized: boolean;   // 위치 초기화 여부
+  isSleeping: boolean;       // 수면 중인지 여부
+}
+
+// 알림 상태 인터페이스
+export interface AlertState {
+  hasShown2HourAlert: boolean;
+  hasShown3HourAlert: boolean;
+  hasShown4HourAlert: boolean;
+  hasShownRestAlert: boolean;
+  hasShownRestCompleteAlert: boolean;
+  lastMainAlertTime: number;
+  lastRestAlertTime: number;
+  isSnoozing: boolean;
+  snoozeEndTime: number;
+}
+
 // 주변 사용자 타입에 통화 중 상태 추가
 export interface NearbyUser {
   id: string;
