@@ -1,4 +1,5 @@
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+import { logger } from './logger';
 
 // Capacitor 환경 감지
 const isCapacitorEnvironment = (): boolean => {
@@ -28,7 +29,7 @@ export const triggerVibration = async (
   try {
     if (isCapacitorEnvironment()) {
       // Capacitor 환경: 네이티브 햅틱 피드백 사용
-      console.log(`🔋 Capacitor 햅틱 피드백: ${hapticType}`);
+      logger.debug(`Capacitor 햅틱 피드백: ${hapticType}`);
       
       switch (hapticType) {
         case 'light':
@@ -61,18 +62,18 @@ export const triggerVibration = async (
       return true;
     } else {
       // 웹 환경: navigator.vibrate 사용
-      console.log(`🌐 웹 진동: ${pattern}`);
+      logger.debug(`웹 진동: ${pattern}`);
       
       if ('vibrate' in navigator) {
         const success = navigator.vibrate(pattern);
         return success;
       } else {
-        console.warn('⚠️ 브라우저가 진동을 지원하지 않습니다.');
+        logger.warn('브라우저가 진동을 지원하지 않습니다.');
         return false;
       }
     }
   } catch (error) {
-    console.error('진동/햅틱 피드백 오류:', error);
+    logger.error('진동/햅틱 피드백 오류:', error);
     return false;
   }
 };

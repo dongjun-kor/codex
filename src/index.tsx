@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import { logger } from './utils/logger';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -32,11 +33,11 @@ const isCapacitorEnvironment = () => {
 
 // Service Worker 등록 결정
 if (isCapacitorEnvironment()) {
-  console.log('🔋 Capacitor 환경 감지됨 - Service Worker 비활성화');
+  logger.info('Capacitor 환경 감지됨 - Service Worker 비활성화');
   // Capacitor 환경에서는 Service Worker를 등록하지 않음
   // 대신 기본적인 오프라인 캐싱은 Capacitor가 담당
 } else {
-  console.log('🌐 웹 브라우저 환경 - Service Worker 활성화');
+  logger.info('웹 브라우저 환경 - Service Worker 활성화');
   // PWA 기능을 사용하려면 register()를 호출하세요.
   // 웹 브라우저 환경에서만 Service Worker 등록
   serviceWorkerRegistration.register();

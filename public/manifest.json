@@ -1,6 +1,7 @@
 {
-  "short_name": "Voice App",
-  "name": "Proximity Voice App",
+  "short_name": "Voice-TS",
+  "name": "Voice-TS | 화물트럭 음성 안전 운행",
+  "description": "화물트럭 운전자를 위한 음성 인식 기반 안전 운행 지원 앱",
   "icons": [
     {
       "src": "favicon.ico",
@@ -24,10 +25,12 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": ".",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "background_color": "#ffffff",
+  "categories": ["navigation", "travel", "business"],
+  "lang": "ko-KR"
 }

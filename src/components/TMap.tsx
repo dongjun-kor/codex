@@ -13,9 +13,6 @@ interface TMapProps {
   nearbyUsers: NearbyUser[];
 }
 
-// T맵 API 키
-const TMAP_API_KEY = 'CQz8CpIyci8MOdvP6clSe5GxnHX9EXeDtBoZ3Sa9';
-
 // forwardRef를 사용하여 부모 컴포넌트에서 ref를 통해 메서드에 접근할 수 있게 함
 const TMap = forwardRef<any, TMapProps>(({ position, onPositionChange, nearbyUsers }, ref) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -25,7 +22,6 @@ const TMap = forwardRef<any, TMapProps>(({ position, onPositionChange, nearbyUse
   const userPreviousPositionsRef = useRef<Map<string, Position>>(new Map());
   const watchIdRef = useRef<number | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [isMapLoaded, setIsMapLoaded] = useState<boolean>(false);
   const [isMapLoading, setIsMapLoading] = useState<boolean>(true);
   const previousPositionRef = useRef<Position | null>(null);
   const [currentBearing, setCurrentBearing] = useState<number>(0);
@@ -160,7 +156,6 @@ const TMap = forwardRef<any, TMapProps>(({ position, onPositionChange, nearbyUse
       
       console.log('지도 인스턴스 생성 완료:', tmapInstance);
       mapRef.current = tmapInstance;
-      setIsMapLoaded(true);
       setMapError(null);
 
       console.log('TMAP 지도 초기화 완료');

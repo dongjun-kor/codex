@@ -1,4 +1,5 @@
-import { StreamSplit, Position } from '../types';
+import { Position } from '../types';
+import { logger } from './logger';
 
 // 현재 사용자의 오디오 스트림 가져오기
 export function getAudioStream(): Promise<MediaStream> {
@@ -26,15 +27,15 @@ export function playAudioStream(stream: MediaStream, targetId: string): HTMLVide
 // 마이크 권한 미리 요청하기 (앱 시작 시 호출)
 export async function requestMicrophonePermission(): Promise<boolean> {
   try {
-    console.log('🎤 마이크 권한 미리 요청...');
+    logger.info('마이크 권한 미리 요청...');
     const stream = await getAudioStream();
     
     // 즉시 스트림 종료 (권한만 확인)
     stream.getTracks().forEach(track => track.stop());
-    console.log('✅ 마이크 권한 확인 완료');
+    logger.info('마이크 권한 확인 완료');
     return true;
   } catch (error) {
-    console.warn('❌ 마이크 권한 요청 실패:', error);
+    logger.warn('마이크 권한 요청 실패:', error);
     return false;
   }
 }
@@ -129,4 +130,27 @@ export function throttle<T extends (...args: any[]) => any>(
       }, limit - (Date.now() - lastRan));
     }
   };
-} 
+}
+
+// 오디오 처리 유틸리티
+
+export interface AudioChunk {
+  buffer: ArrayBuffer;
+  timestamp: number;
+}
+
+export interface AudioProcessor {
+  processChunk: (chunk: AudioChunk) => void;
+  flush: () => void;
+}
+
+export const createAudioProcessor = (): AudioProcessor => {
+  return {
+    processChunk: (chunk: AudioChunk) => {
+      // 오디오 청크 처리 로직
+    },
+    flush: () => {
+      // 버퍼 비우기
+    }
+  };
+}; 

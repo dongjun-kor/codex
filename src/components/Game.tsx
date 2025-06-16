@@ -2,8 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
 import Peer from 'peerjs';
 import { Player, Position, StreamSplit, NearbyUser } from '../types';
-import { calcVolumes, getAudioStream, playAudioStream, throttle, requestMicrophonePermission } from '../utils/audio';
+import { calcVolumes, getAudioStream, playAudioStream, throttle } from '../utils/audio';
 import { carIntegration, CarCallHandlers } from '../utils/carIntegration';
+import { logger } from '../utils/logger';
 import MapSelector from './MapSelector';
 import DrivingMonitor from './DrivingMonitor';
 import FavoriteDrivers from './FavoriteDrivers';
@@ -46,13 +47,11 @@ interface ExtendedPlayer extends Player {
 
 const Game: React.FC<GameProps> = ({ userId, userNickname, onLogout }) => {
   const [logs, setLogs] = useState<string[]>([]);
-  const [userName, setUserName] = useState<string>(userNickname);
+  const [userName] = useState<string>(userNickname);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [activeCall, setActiveCall] = useState<boolean>(false);
-  const [isListening, setIsListening] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [callRequests, setCallRequests] = useState<{id: string, name: string}[]>([]);
   const [showPopup, setShowPopup] = useState<boolean>(false);
   const [incomingCall, setIncomingCall] = useState<{id: string, name: string} | null>(null);
   const [showRejectionPopup, setShowRejectionPopup] = useState<boolean>(false);
@@ -1235,7 +1234,7 @@ const Game: React.FC<GameProps> = ({ userId, userNickname, onLogout }) => {
   const toggleListening = () => {
     // 청취 모드는 현재 버전에서는 지원하지 않음
     // 이전 버전의 코드를 주석 처리하고 로그 메시지만 출력
-    console.log('청취 모드는 현재 지원되지 않습니다.');
+    logger.debug('청취 모드는 현재 지원되지 않습니다.');
     
     /*
     setIsListening(!isListening);

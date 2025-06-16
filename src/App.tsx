@@ -4,6 +4,7 @@ import Game from './components/Game';
 import Login from './components/Login';
 import { supabase } from './supabase/client';
 import { setupVibrationHandler } from './serviceWorkerRegistration';
+import { logger } from './utils/logger';
 
 interface UserData {
   id: string;
@@ -40,10 +41,10 @@ function App() {
         const resetInProgress = localStorage.getItem(`resetInProgress_${userId}`);
         
         // Service Worker에게 응답 (실제로는 Service Worker가 응답을 기다리지 않음)
-        console.log(`Service Worker 초기화 상태 체크 요청: ${userId}, 진행중: ${resetInProgress === 'true'}`);
+        logger.debug(`Service Worker 초기화 상태 체크 요청: ${userId}, 진행중: ${resetInProgress === 'true'}`);
       } else if (event.data && event.data.type === 'OFFLINE_RESET') {
         const { message } = event.data;
-        console.log(`🌙 App - Service Worker 오프라인 초기화 알림: ${message}`);
+        logger.info(`App - Service Worker 오프라인 초기화 알림: ${message}`);
         
         // 오프라인 초기화 알림을 사용자에게 표시 (필요시)
         // 실제 상태 초기화는 DrivingMonitor에서 처리
@@ -53,9 +54,9 @@ function App() {
     // Service Worker 메시지 리스너 등록 (웹 환경에서만)
     if (!isCapacitorEnvironment() && 'serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
-      console.log('🌐 웹 환경: Service Worker 메시지 리스너 등록됨');
+      logger.info('웹 환경: Service Worker 메시지 리스너 등록됨');
     } else if (isCapacitorEnvironment()) {
-      console.log('🔋 Capacitor 환경: Service Worker 리스너 비활성화');
+      logger.info('Capacitor 환경: Service Worker 리스너 비활성화');
     }
     
     // 로그인 상태 확인
@@ -97,7 +98,7 @@ function App() {
             .single();
             
           if (error) {
-            console.error('사용자 정보 조회 오류:', error);
+            logger.error('사용자 정보 조회 오류:', error);
           } else if (data) {
             // 사용자 정보 저장
             localStorage.setItem('user_nickname', data.nickname);
@@ -112,7 +113,7 @@ function App() {
           setIsLoggedIn(true);
           setIsLoading(false);
         } catch (err) {
-          console.error('사용자 정보 조회 중 오류:', err);
+          logger.error('사용자 정보 조회 중 오류:', err);
           setIsLoading(false);
         }
       };
@@ -126,7 +127,7 @@ function App() {
     return () => {
       if (!isCapacitorEnvironment() && 'serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
-        console.log('🌐 웹 환경: Service Worker 메시지 리스너 제거됨');
+        logger.debug('웹 환경: Service Worker 메시지 리스너 제거됨');
       }
     };
   }, []);
