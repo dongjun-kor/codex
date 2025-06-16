@@ -1,5 +1,7 @@
 // 자동차 핸즈프리 시스템 연동 유틸리티
 
+import { triggerAlertVibration } from './haptics';
+
 export interface CarCallHandlers {
   onCallAnswer: () => void;
   onCallEnd: () => void;
@@ -239,16 +241,16 @@ export class CarIntegration {
     }
   }
 
-  // 자동차 진동 알림 (지원하는 경우)
-  vibrateNotification() {
-    if ('vibrate' in navigator) {
-      try {
-        // 통화 수신 패턴: 짧게-길게-짧게
-        navigator.vibrate([200, 100, 500, 100, 200]);
-        console.log('🚗 자동차 진동 알림 실행');
-      } catch (error) {
-        console.warn('진동 알림 실패:', error);
-      }
+  // 자동차 진동/햅틱 알림 (크로스 플랫폼 지원)
+  async vibrateNotification() {
+    try {
+      // 통화 수신 패턴을 사용한 진동/햅틱 피드백
+      const success = await triggerAlertVibration('main');
+      console.log('🚗 자동차 진동/햅틱 알림 실행:', success ? '성공' : '실패');
+      return success;
+    } catch (error) {
+      console.warn('진동/햅틱 알림 실패:', error);
+      return false;
     }
   }
 

@@ -10,6 +10,18 @@ interface UserData {
   nickname: string;
 }
 
+// Capacitor 환경 감지 함수
+const isCapacitorEnvironment = () => {
+  return !!(
+    (window as any).Capacitor || 
+    (window as any).capacitor ||
+    document.URL.includes('capacitor://') ||
+    document.URL.includes('ionic://') ||
+    (window as any).AndroidBridge ||
+    (window as any).cordova
+  );
+};
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -19,7 +31,7 @@ function App() {
     // 진동 핸들러 초기화
     setupVibrationHandler();
     
-    // Service Worker 메시지 리스너 설정
+    // Service Worker 메시지 리스너 설정 (웹 환경에서만)
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'CHECK_RESET_IN_PROGRESS') {
         const { userId } = event.data;
@@ -30,7 +42,7 @@ function App() {
         // Service Worker에게 응답 (실제로는 Service Worker가 응답을 기다리지 않음)
         console.log(`Service Worker 초기화 상태 체크 요청: ${userId}, 진행중: ${resetInProgress === 'true'}`);
       } else if (event.data && event.data.type === 'OFFLINE_RESET') {
-        const { userId, message } = event.data;
+        const { message } = event.data;
         console.log(`🌙 App - Service Worker 오프라인 초기화 알림: ${message}`);
         
         // 오프라인 초기화 알림을 사용자에게 표시 (필요시)
@@ -38,9 +50,12 @@ function App() {
       }
     };
     
-    // Service Worker 메시지 리스너 등록
-    if ('serviceWorker' in navigator) {
+    // Service Worker 메시지 리스너 등록 (웹 환경에서만)
+    if (!isCapacitorEnvironment() && 'serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+      console.log('🌐 웹 환경: Service Worker 메시지 리스너 등록됨');
+    } else if (isCapacitorEnvironment()) {
+      console.log('🔋 Capacitor 환경: Service Worker 리스너 비활성화');
     }
     
     // 로그인 상태 확인
@@ -107,10 +122,11 @@ function App() {
       checkLoginStatus();
     }
     
-    // 컴포넌트 언마운트 시 리스너 제거
+    // 컴포넌트 언마운트 시 리스너 제거 (웹 환경에서만)
     return () => {
-      if ('serviceWorker' in navigator) {
+      if (!isCapacitorEnvironment() && 'serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+        console.log('🌐 웹 환경: Service Worker 메시지 리스너 제거됨');
       }
     };
   }, []);

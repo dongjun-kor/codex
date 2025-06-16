@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Position, ExtendedDrivingState } from '../types';
 import { supabase } from '../supabase/client';
+import { Position, ExtendedDrivingState } from '../types';
 import { 
   hasAudioContext, 
   getAudioContext, 
@@ -576,12 +576,134 @@ const DrivingMonitor: React.FC<DrivingMonitorProps> = ({
     };
   }, [userId]);
 
+  // 운행 시작
+  const startDriving = useCallback(() => {
+    console.log('운행 시작 (기존 누적 시간 유지)');
+    const now = Date.now();
+    
+    setDrivingState(prev => ({
+      ...prev,
+      isDriving: true,
+      isResting: false,
+      drivingStartTime: now, // 새로운 세션 시작 시간
+      currentSessionTime: 0, // 새로운 세션 시간 초기화
+      hasInitialized: true,
+      // 운행 시작 시 정지 상태 초기화
+      isZeroSpeed: false,
+      zeroSpeedStartTime: 0
+      // totalDrivingTime은 기존 누적 시간 유지 (초기화하지 않음)
+    }));
+    
+    setIsStatusChanged(true);
+  }, [setDrivingState, setIsStatusChanged]);
+
+  // 위치 변경 처리
+  const handlePositionChange = useCallback((newPosition: Position) => {
+    const now = Date.now();
+    const currentState = drivingStateRef.current;
+    
+    // 위치가 유효하지 않으면 무시
+    if (!newPosition || !newPosition.lat || !newPosition.lng) return;
+    
+    // 첫 위치 설정인 경우 - 운행 시작으로 간주 (팝업 없이)
+    if (currentState.lastPosition.lat === 0 && currentState.lastPosition.lng === 0) {
+      console.log('첫 위치 감지, 운행 시작 (자동)');
+      setDrivingState(prev => ({
+        ...prev,
+        lastPosition: newPosition,
+        lastSpeedCheck: now,
+        isDriving: true,
+        drivingStartTime: now,
+        hasInitialized: true,
+        // 초기에는 정지 상태가 아닌 것으로 설정 (앱 실행 시 자동 휴식 방지)
+        isZeroSpeed: false
+      }));
+      return;
+    }
+    
+    // 위치 변경이 없으면 무시
+    if (
+      newPosition.lat === currentState.lastPosition.lat && 
+      newPosition.lng === currentState.lastPosition.lng
+    ) {
+      return;
+    }
+    
+    // 마지막 위치 체크로부터 시간 경과 계산 (초)
+    const timeDiffSeconds = (now - currentState.lastSpeedCheck) / 1000;
+    
+    // 속도 계산 (최소 1초 간격)
+    if (timeDiffSeconds >= 1) {
+      const speed = calculateSpeed(
+        currentState.lastPosition,
+        newPosition,
+        timeDiffSeconds
+      );
+      
+      console.log('현재 속도:', speed.toFixed(1), 'km/h');
+      
+      // 속도가 10km/h 이상이면 실제 운행으로 간주 (휴식 취소 임계값 상향)
+      const isZero = speed < 10;
+      
+      // 정지 상태 변경 감지
+      if (isZero !== currentState.isZeroSpeed) {
+        if (isZero) {
+          // 정지 시작
+          console.log('정지 상태 시작 감지');
+          setDrivingState(prev => ({
+            ...prev,
+            isZeroSpeed: true,
+            zeroSpeedStartTime: now
+          }));
+        } else {
+          // 움직임 시작
+          console.log('움직임 시작 감지');
+          setDrivingState(prev => ({
+            ...prev,
+            isZeroSpeed: false,
+            zeroSpeedStartTime: 0,
+            // 휴식 중이었다면 휴식 취소
+            isResting: prev.isResting ? false : prev.isResting,
+            restStartTime: prev.isResting ? 0 : prev.restStartTime,
+            restDuration: prev.isResting ? 0 : prev.restDuration
+          }));
+          
+          // 휴식 중이었다면 휴식 타이머 종료
+          if (currentState.isResting) {
+            console.log('휴식 중 움직임 감지, 휴식 취소');
+            setIsRestTimerActive(false);
+          }
+          
+          // 아직 운행 중이 아니었다면 운행 시작
+          if (!currentState.isDriving) {
+            startDriving();
+          }
+        }
+      } else if (isZero && currentState.isZeroSpeed) {
+        // 계속 정지 상태일 경우 남은 시간 로깅
+        const zeroSpeedDuration = Math.floor((now - currentState.zeroSpeedStartTime) / 1000);
+        const remainingTime = ZERO_SPEED_REST_TIME - zeroSpeedDuration;
+        
+        if (remainingTime > 0 && remainingTime % 60 === 0) {
+          console.log(`정지 상태 유지 중: 휴식 인정까지 ${Math.ceil(remainingTime / 60)}분 남음`);
+        }
+      }
+      
+      // 위치 및 마지막 체크 시간 업데이트
+      setDrivingState(prev => ({
+        ...prev,
+        lastPosition: newPosition,
+        lastSpeedCheck: now
+      }));
+    }
+  }, [setDrivingState, setIsRestTimerActive, startDriving]); // startDriving 의존성 추가
+
   // 위치 변경 감지
   useEffect(() => {
     onPositionChange(position);
     // 실제 위치 처리 로직 호출
     handlePositionChange(position);
-  }, [position]);
+  }, [position, onPositionChange, handlePositionChange]);
 
   // 외부에서 전달받은 수면 상태 변경 감지
   useEffect(() => {
@@ -1443,128 +1565,6 @@ const DrivingMonitor: React.FC<DrivingMonitorProps> = ({
     }, 1000);
   };
 
-  // 위치 변경 처리
-  const handlePositionChange = (newPosition: Position) => {
-    const now = Date.now();
-    const currentState = drivingStateRef.current;
-    
-    // 위치가 유효하지 않으면 무시
-    if (!newPosition || !newPosition.lat || !newPosition.lng) return;
-    
-    // 첫 위치 설정인 경우 - 운행 시작으로 간주 (팝업 없이)
-    if (currentState.lastPosition.lat === 0 && currentState.lastPosition.lng === 0) {
-      console.log('첫 위치 감지, 운행 시작 (자동)');
-      setDrivingState(prev => ({
-        ...prev,
-        lastPosition: newPosition,
-        lastSpeedCheck: now,
-        isDriving: true,
-        drivingStartTime: now,
-        hasInitialized: true,
-        // 초기에는 정지 상태가 아닌 것으로 설정 (앱 실행 시 자동 휴식 방지)
-        isZeroSpeed: false
-      }));
-      return;
-    }
-    
-    // 위치 변경이 없으면 무시
-    if (
-      newPosition.lat === currentState.lastPosition.lat && 
-      newPosition.lng === currentState.lastPosition.lng
-    ) {
-      return;
-    }
-    
-    // 마지막 위치 체크로부터 시간 경과 계산 (초)
-    const timeDiffSeconds = (now - currentState.lastSpeedCheck) / 1000;
-    
-    // 속도 계산 (최소 1초 간격)
-    if (timeDiffSeconds >= 1) {
-      const speed = calculateSpeed(
-        currentState.lastPosition,
-        newPosition,
-        timeDiffSeconds
-      );
-      
-      console.log('현재 속도:', speed.toFixed(1), 'km/h');
-      
-      // 속도가 10km/h 이상이면 실제 운행으로 간주 (휴식 취소 임계값 상향)
-      const isZero = speed < 10;
-      
-      // 정지 상태 변경 감지
-      if (isZero !== currentState.isZeroSpeed) {
-        if (isZero) {
-          // 정지 시작
-          console.log('정지 상태 시작 감지');
-          setDrivingState(prev => ({
-            ...prev,
-            isZeroSpeed: true,
-            zeroSpeedStartTime: now
-          }));
-        } else {
-          // 움직임 시작
-          console.log('움직임 시작 감지');
-          setDrivingState(prev => ({
-            ...prev,
-            isZeroSpeed: false,
-            zeroSpeedStartTime: 0,
-            // 휴식 중이었다면 휴식 취소
-            isResting: prev.isResting ? false : prev.isResting,
-            restStartTime: prev.isResting ? 0 : prev.restStartTime,
-            restDuration: prev.isResting ? 0 : prev.restDuration
-          }));
-          
-          // 휴식 중이었다면 휴식 타이머 종료
-          if (currentState.isResting) {
-            console.log('휴식 중 움직임 감지, 휴식 취소');
-            setIsRestTimerActive(false);
-          }
-          
-          // 아직 운행 중이 아니었다면 운행 시작
-          if (!currentState.isDriving) {
-            startDriving();
-          }
-        }
-      } else if (isZero && currentState.isZeroSpeed) {
-        // 계속 정지 상태일 경우 남은 시간 로깅
-        const zeroSpeedDuration = Math.floor((now - currentState.zeroSpeedStartTime) / 1000);
-        const remainingTime = ZERO_SPEED_REST_TIME - zeroSpeedDuration;
-        
-        if (remainingTime > 0 && remainingTime % 60 === 0) {
-          console.log(`정지 상태 유지 중: 휴식 인정까지 ${Math.ceil(remainingTime / 60)}분 남음`);
-        }
-      }
-      
-      // 위치 및 마지막 체크 시간 업데이트
-      setDrivingState(prev => ({
-        ...prev,
-        lastPosition: newPosition,
-        lastSpeedCheck: now
-      }));
-    }
-  };
-  
-  // 운행 시작
-  const startDriving = () => {
-    console.log('운행 시작 (기존 누적 시간 유지)');
-    const now = Date.now();
-    
-    setDrivingState(prev => ({
-      ...prev,
-      isDriving: true,
-      isResting: false,
-      drivingStartTime: now, // 새로운 세션 시작 시간
-      currentSessionTime: 0, // 새로운 세션 시간 초기화
-      hasInitialized: true,
-      // 운행 시작 시 정지 상태 초기화
-      isZeroSpeed: false,
-      zeroSpeedStartTime: 0
-      // totalDrivingTime은 기존 누적 시간 유지 (초기화하지 않음)
-    }));
-    
-    setIsStatusChanged(true);
-  };
-  
   // 휴식 시작
   const startRest = () => {
     console.log('휴식 시작');

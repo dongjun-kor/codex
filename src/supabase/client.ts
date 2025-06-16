@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase 설정
-const supabaseUrl = 'https://mmbconpyzgsfmogvaosr.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tYmNvbnB5emdzZm1vZ3Zhb3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MDEyNDEsImV4cCI6MjA2MzM3NzI0MX0.Lrd_kfrqMqtRIRKyET1DKHSZa0uRMYZBnSSazjzhmRM';
+// 환경 변수에서 Supabase 설정 가져오기
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL!;
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY!;
+
+// 환경 변수 검증
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Supabase 환경 변수가 설정되지 않았습니다. .env 파일을 확인해주세요.');
+}
 
 // Supabase 클라이언트 생성
 export const supabase = createClient(supabaseUrl, supabaseKey); 

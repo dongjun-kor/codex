@@ -10,6 +10,8 @@
 // To learn more about the benefits of this model and instructions on how to
 // opt-in, read https://cra.link/PWA
 
+import { triggerVibration } from './utils/haptics';
+
 const isLocalhost = Boolean(
   window.location.hostname === 'localhost' ||
     // [::1] is the IPv6 localhost address.
@@ -150,21 +152,26 @@ export function sendMessageToSW(message: any) {
   }
 }
 
-// 진동 알림을 위한 Service Worker 메시지 핸들러
+// 진동 알림을 위한 Service Worker 메시지 핸들러 (크로스 플랫폼 햅틱 지원)
 export function setupVibrationHandler() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', (event) => {
+    navigator.serviceWorker.addEventListener('message', async (event) => {
       if (event.data && event.data.type === 'VIBRATE') {
         const { pattern, fallbackMessage } = event.data;
         
-        // 진동 실행
-        if ('vibrate' in navigator) {
-          const success = navigator.vibrate(pattern);
-          console.log('Service Worker 진동 실행:', success ? '성공' : '실패');
+        // 크로스 플랫폼 진동/햅틱 실행
+        try {
+          const success = await triggerVibration(pattern, 'medium');
+          console.log('Service Worker 진동/햅틱 실행:', success ? '성공' : '실패');
           
           if (!success && fallbackMessage) {
             // 진동 실패 시 알림 표시
             console.log('진동 실패 - 대체 알림:', fallbackMessage);
+          }
+        } catch (error) {
+          console.error('Service Worker 진동/햅틱 오류:', error);
+          if (fallbackMessage) {
+            console.log('진동 오류 - 대체 알림:', fallbackMessage);
           }
         }
       }
