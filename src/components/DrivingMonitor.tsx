@@ -1,31 +1,27 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Position } from '../types';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Position, ExtendedDrivingState } from '../types';
+import { supabase } from '../supabase/client';
 import { 
-  DrivingState, AlertState, 
+  hasAudioContext, 
+  getAudioContext, 
+  hasVibration, 
+  safeVibrate, 
+  hasUserActivation, 
+  getUserActivation,
+  hasMediaSession,
+  hasServiceWorker,
+  hasIndexedDB,
+  getDeviceInfo
+} from '../utils/typeGuards';
+import { 
+  DrivingState, AlertState,
   initialDrivingState, initialAlertState,
   calculateSpeed, calculateDistance, formatDrivingTime, 
-  formatRestTime, calculateRemainingRestTime,
+  calculateRemainingRestTime, formatRestTime,
   DRIVING_TIME_LIMIT, PRE_ALERT_TIME, FOUR_HOUR_LIMIT, 
   SIX_HOUR_LIMIT, REQUIRED_REST_TIME, ZERO_SPEED_REST_TIME,
   FIRST_ALERT_TIME, SECOND_ALERT_TIME, THIRD_ALERT_TIME, FOURTH_ALERT_TIME
 } from '../utils/drivingMonitor';
-
-// 확장된 운행 상태 인터페이스
-interface ExtendedDrivingState {
-  isDriving: boolean;        // 현재 운행 중인지
-  drivingStartTime: number;  // 운행 시작 시간 (timestamp)
-  restStartTime: number;     // 휴식 시작 시간 (timestamp)
-  lastPosition: Position;    // 마지막 위치
-  lastSpeedCheck: number;    // 마지막 속도 체크 시간 (timestamp)
-  isZeroSpeed: boolean;      // 현재 0km/h 상태인지
-  zeroSpeedStartTime: number; // 0km/h 시작 시간 (timestamp)
-  totalDrivingTime: number;  // 총 운행 시간 (초) - 누적된 시간
-  currentSessionTime: number; // 현재 세션 운행 시간 (초)
-  isResting: boolean;        // 휴식 중인지 여부
-  restDuration: number;      // 현재 휴식 시간 (초)
-  hasInitialized: boolean;   // 위치 초기화 여부
-  isSleeping: boolean;       // 수면 중인지 여부
-}
 
 interface DrivingMonitorProps {
   position: Position;
@@ -1868,7 +1864,8 @@ const DrivingMonitor: React.FC<DrivingMonitorProps> = ({
     
     // 방법 3: Audio Context를 이용한 무음 오디오 (iOS에서 햅틱 느낌)
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = getAudioContext();
+      if (!audioContext) return hapticTriggered;
       
       // 강도별 다른 주파수와 지속시간
       const frequency = type === 'heavy' ? 40 : type === 'medium' ? 30 : 20;
@@ -1926,14 +1923,13 @@ const DrivingMonitor: React.FC<DrivingMonitorProps> = ({
     isIOS: boolean;
     hasIOSHaptic: boolean;
   } => {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent);
+    const deviceInfo = getDeviceInfo();
+    const { isIOS, isSafari, userAgent } = deviceInfo;
     
     // iOS 18+ 햅틱 지원 확인
     const hasIOSHaptic = isIOS && 'HTMLInputElement' in window;
     
-    const isSupported = 'vibrate' in navigator || hasIOSHaptic;
+    const isSupported = hasVibration() || hasIOSHaptic;
     let debugInfo = `브라우저 지원: ${isSupported ? '✅' : '❌'}`;
     debugInfo += `, iOS: ${isIOS ? '✅' : '❌'}`;
     debugInfo += `, Safari: ${isSafari ? '✅' : '❌'}`;
@@ -1941,18 +1937,18 @@ const DrivingMonitor: React.FC<DrivingMonitorProps> = ({
     
     // 사용자 활성화 상태 확인 (더 정확한 방법)
     let isUserActivated = false;
-    if ('vibrate' in navigator) {
+    if (hasVibration()) {
       try {
         // navigator.userActivation API 사용 (최신 브라우저)
-        if ('userActivation' in navigator) {
-          const userActivation = (navigator as any).userActivation;
+        const userActivation = getUserActivation();
+        if (userActivation) {
           isUserActivated = userActivation.hasBeenActive || userActivation.isActive;
           debugInfo += `, UserActivation API: ${isUserActivated ? '✅' : '❌'}`;
           debugInfo += `, hasBeenActive: ${userActivation.hasBeenActive}`;
           debugInfo += `, isActive: ${userActivation.isActive}`;
         } else {
           // 대체 방법: 실제 진동 테스트
-          const result = (navigator as any).vibrate(0); // 0은 진동을 취소하므로 안전
+          const result = safeVibrate(0); // 0은 진동을 취소하므로 안전
           isUserActivated = result === true;
           debugInfo += `, 진동 테스트: ${result ? '✅' : '❌'}`;
         }
@@ -2012,7 +2008,12 @@ const DrivingMonitor: React.FC<DrivingMonitorProps> = ({
   const playAudioAlert = (type: 'main' | 'rest' | 'complete') => {
     // Web Audio API를 사용한 비프음 생성
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = getAudioContext();
+      if (!audioContext) {
+        console.log('AudioContext를 사용할 수 없습니다.');
+        return;
+      }
+      
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
@@ -2076,10 +2077,10 @@ const DrivingMonitor: React.FC<DrivingMonitorProps> = ({
     }
     
     // 일반 진동 API 시도 (Android 등)
-    if (vibrationStatus.canVibrate && 'vibrate' in navigator) {
+    if (vibrationStatus.canVibrate && hasVibration()) {
       const vibrationPattern = getVibrationPattern(type);
       try {
-        const success = (navigator as any).vibrate(vibrationPattern);
+        const success = safeVibrate(vibrationPattern);
         
         if (success) {
           return; // 진동 성공 시 추가 알림 불필요
@@ -2104,9 +2105,9 @@ const DrivingMonitor: React.FC<DrivingMonitorProps> = ({
   const setupUserActivationListener = () => {
     const handleUserInteraction = () => {
       // 진동 테스트
-      if ('vibrate' in navigator) {
+      if (hasVibration()) {
         try {
-          const success = (navigator as any).vibrate([50]); // 짧은 테스트 진동
+          const success = safeVibrate([50]); // 짧은 테스트 진동
           
           if (success) {
             // 진동 활성화 성공 시 로그만 남기고 팝업은 표시하지 않음
