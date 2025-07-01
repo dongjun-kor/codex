@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import Game from './components/Game';
 import Login from './components/Login';
+import GPTChat from './components/GPTChat';
 import { supabase } from './supabase/client';
 import { setupVibrationHandler } from './serviceWorkerRegistration';
 
@@ -14,6 +15,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
 
   useEffect(() => {
     // 진동 핸들러 초기화
@@ -149,6 +151,21 @@ function App() {
             userNickname={userData.nickname} 
             onLogout={handleLogout}
           />}
+          
+          {/* GPT 채팅 버튼 (로그인 후에만 표시) */}
+          <button 
+            className="gpt-chat-trigger"
+            onClick={() => setIsChatOpen(true)}
+            title="GPT와 채팅하기"
+          >
+            🤖 GPT
+          </button>
+          
+          {/* GPT 채팅 컴포넌트 */}
+          <GPTChat 
+            isOpen={isChatOpen}
+            onClose={() => setIsChatOpen(false)}
+          />
         </>
       ) : (
         <Login />
