@@ -9,6 +9,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import { getUserByKakaoId, upsertUser } from './supabase';
+import chatRoutes from './chatRoutes';
 
 // SSL 설정
 const SSL_CONFIG = {
@@ -44,6 +45,21 @@ app.use('/peerjs', peerServer);
 app.use(express.static(path.join(__dirname, '../build')));
 app.use(express.json()); // JSON 요청 본문 파싱 활성화
 app.use(express.text({ type: 'text/plain' })); // sendBeacon으로 전송되는 텍스트 데이터 처리
+
+// CORS 설정 (채팅 API를 위해)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// GPT 채팅 API 라우터 추가
+app.use('/api', chatRoutes);
 
 // 인덱스 파일 전송
 app.get('/', (req, res) => {
